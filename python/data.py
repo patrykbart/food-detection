@@ -1,12 +1,12 @@
 import os
 import numpy as np
+from tqdm import tqdm
 import xml.etree.ElementTree as ET
 from tensorflow.keras.preprocessing.image import ImageDataGenerator, load_img, img_to_array
 
 
 def load_dataset(path, grid_size, classes, b_boxes, batch):
     images_num = sum(f.endswith("png") for root, dirs, files in os.walk(path) for f in files)
-    print(f"Number of images: {images_num}")
 
     image_generator = ImageDataGenerator(rescale=1./255)
 
@@ -15,14 +15,16 @@ def load_dataset(path, grid_size, classes, b_boxes, batch):
 
     print("Loading dataset...")
     index = 0
-    for class_dir in os.listdir(os.path.join(path, "annotations")):
-        for file in os.listdir(os.path.join(path, "annotations", class_dir)):
-            if file.endswith(".xml"):
-                img_path = os.path.join(path, "images", class_dir, file.replace("xml", "png"))
+    with tqdm(total=images_num) as pbar:
+        for class_dir in os.listdir(os.path.join(path, "annotations")):
+            for file in os.listdir(os.path.join(path, "annotations", class_dir)):
+                if file.endswith(".xml"):
+                    img_path = os.path.join(path, "images", class_dir, file.replace("xml", "png"))
 
-                x[index] = img_to_array(load_img(img_path))
-                y[index] = get_object_array(path, class_dir, file, grid_size, classes, b_boxes)
-                index += 1
+                    x[index] = img_to_array(load_img(img_path))
+                    y[index] = get_object_array(path, class_dir, file, grid_size, classes, b_boxes)
+                    index += 1
+                    pbar.update(1)
 
     y = np.asarray(y).astype("float32")
     return image_generator.flow(x, y, batch_size=batch)
