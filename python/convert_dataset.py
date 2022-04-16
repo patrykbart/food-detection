@@ -22,9 +22,10 @@ def main(args):
     os.mkdir(os.path.join(args.dest, "images"))
     os.mkdir(os.path.join(args.dest, "annotations"))
 
-    for index, class_name in class_names.items():
-        with tqdm(total=len(os.path.join(args.source, index)) * 2) as pbar:
-            print(class_name.upper())
+    print("Converting dataset...")
+    images_num = sum(f.endswith("jpg") for root, dirs, files in os.walk(args.source) for f in files)
+    with tqdm(total=images_num) as pbar:
+        for index, class_name in class_names.items():
 
             # Create directory for every class
             os.mkdir(os.path.join(args.dest, "images", class_name))
@@ -41,18 +42,14 @@ def main(args):
                         quality=95
                     )
 
-                    pbar.update(1)
+                    pbar.update(0.5)
 
             # Create annotations
             for line in open(os.path.join(args.source, index, "bb_info.txt"), "r").readlines()[1:]:
                 image_index, xmin, ymin, xmax, ymax = line.split()
 
-                path = os.path.abspath(
-                    os.path.join(os.path.join(args.dest, "images", class_name, f"{image_index}.png"))
-                )
-
                 # Normalize bounding box coordinates
-                img_width, img_height = Image.open(path).size
+                img_width, img_height = Image.open(os.path.join(args.source, index, f"{image_index}.jpg")).size
                 xmin = int(int(xmin) * (224 / img_width))
                 xmax = int(int(xmax) * (224 / img_width))
                 ymin = int(int(ymin) * (224 / img_height))
@@ -60,7 +57,7 @@ def main(args):
 
                 # Generate XML
                 xml = generate_xml(
-                    path=path,
+                    path=os.path.join(os.path.join(args.dest, "images", class_name, f"{image_index}.png")),
                     index=image_index,
                     class_name=class_name,
                     xmin=xmin,
@@ -73,7 +70,7 @@ def main(args):
                 xml = minidom.parseString(ET.tostring(xml)).toprettyxml(indent="\t")
                 open(os.path.join(args.dest, "annotations", class_name, f"{image_index}.xml"), "w").write(xml)
 
-                pbar.update(1)
+                pbar.update(0.5)
 
 
 def generate_xml(path, index, class_name, xmin, ymin, xmax, ymax):
