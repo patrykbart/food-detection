@@ -4,3 +4,4 @@
 .DS_Store
 base_dataset/
 dataset/
+__pycache__
